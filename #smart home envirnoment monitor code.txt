@@ -1,0 +1,76 @@
+#include <LiquidCrystal_I2C.h>
+
+// Setup LCD
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void setup() {
+  // Start serial and LCD
+  Serial.begin(9600);
+  lcd.init();
+  lcd.backlight();
+
+  // Setup pins
+  pinMode(11, INPUT_PULLUP);  // Sound button
+  pinMode(12, OUTPUT);        // Buzzer
+  pinMode(13, OUTPUT);        // LED
+
+  Serial.println("Smart Home Monitor Started!");
+}
+
+void loop() {
+  // Read sensors
+  int tempRaw = analogRead(A0);           // Potentiometer for temperature
+  int lightRaw = analogRead(A1);          // LDR for light
+  int micRaw = analogRead(A2);            // Second potentiometer simulating microphone
+  bool soundPressed = !digitalRead(11);   // Sound button
+
+  // Convert to useful values
+  int temperature = map(tempRaw, 0, 1023, 0, 50);    // 0-50 degrees
+  int lightLevel = map(lightRaw, 0, 1023, 0, 100);   // 0-100 percent
+  int micLevel = map(micRaw, 0, 1023, 0, 100);       // Simulated sound level
+
+  // Show on Serial Monitor
+  Serial.print("Temp: ");
+  Serial.print(temperature);
+  Serial.print("°C  Light: ");
+  Serial.print(lightLevel);
+  Serial.print("%  Sound Btn: ");
+  Serial.print(soundPressed ? "YES" : "NO");
+  Serial.print("  Mic Level: ");
+  Serial.println(micLevel);
+
+  // Show on LCD
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("T:");
+  lcd.print(temperature);
+  lcd.print("C L:");
+  lcd.print(lightLevel);
+  lcd.print("%");
+
+  lcd.setCursor(0, 1);
+  lcd.print("Mic:");
+  lcd.print(micLevel);
+  lcd.print(" Btn:");
+  lcd.print(soundPressed ? "Y" : "N");
+
+  // Check if alerts needed
+  bool alert = false;
+  if (temperature > 35) alert = true;      // Too hot
+  if (lightLevel > 80) alert = true;       // Too bright
+  if (soundPressed) alert = true;          // Sound button pressed
+  if (micLevel > 70) alert = true;         // Loud simulated sound
+
+  // Turn on buzzer and LED if alert
+  if (alert) {
+    digitalWrite(13, HIGH);    // LED on
+    tone(12, 1000);            // Buzzer on
+    lcd.setCursor(14, 1);
+    lcd.print("!!");           // Alert sign on LCD
+  } else {
+    digitalWrite(13, LOW);     // LED off
+    noTone(12);                // Buzzer off
+  }
+
+  delay(1000);  // Wait 1 second before checking again
+}
